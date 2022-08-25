@@ -139,7 +139,7 @@ def fastqDumpCmd(file_or_srr, library, run, srr_start=0, srr_end=-1, threads=1, 
     if (use_custom_split) {
         cmd = """
             #cp -r $HOME/.ncbi/ . # Fix for sra-tools requiring ncbi folder locally
-            HOME=`readlink -e ./`
+            #HOME=`readlink -e ./`
             fastq-dump ${file_or_srr} -Z --split-spot ${srr_start_flag} ${srr_end_flag} \
                         | pyfilesplit --lines 4 \
                             >(bgzip -c -@{bgzip_threads} > ${library}.${run}.1.fastq.gz) \
@@ -150,7 +150,7 @@ def fastqDumpCmd(file_or_srr, library, run, srr_start=0, srr_end=-1, threads=1, 
     } else {
         cmd = """
             #cp -r $HOME/.ncbi/ .  # Fix for sra-tools requiring ncbi folder locally
-            HOME=`readlink -e ./`
+            #HOME=`readlink -e ./`
             fastq-dump ${file_or_srr} --gzip --split-spot --split-3 ${srr_start_flag} ${srr_end_flag} 
             mv *_1.fastq.gz ${library}.${run}.1.fastq.gz
             mv *_2.fastq.gz ${library}.${run}.2.fastq.gz
@@ -502,9 +502,10 @@ process map_parse_sort_chunks {
     touch ${library}.${run}.${ASSEMBLY_NAME}.${chunk}.bam
 
     ${mapping_command} \
-    | pairtools parse ${dropsam_flag} ${dropreadid_flag} ${dropseq_flag} \
+    | pairtools parse ${dropsam_flag} ${dropreadid_flag} ${dropseq_flag}   --min-mapq 0 \
       ${parsing_options} \
       -c ${chrom_sizes} \
+      | pairtools phase --phase-suffixes _hap1 _hap2 --tag-mode XA --clean-output \
       | pairtools sort --nproc ${sorting_threads} \
                      -o ${library}.${run}.${ASSEMBLY_NAME}.${chunk}.pairsam.${suffix} \
                      --tmpdir \$TASK_TMP_DIR \
@@ -554,7 +555,7 @@ process merge_dedup_splitbam {
         TASK_TMP_DIR=\$(mktemp -d -p ${task.distillerTmpDir} distiller.tmp.XXXXXXXXXX)
 
         ${merge_command} | pairtools dedup \
-            --max-mismatch ${params.dedup.max_mismatch_bp} \
+            --max-mismatch ${params.dedup.max_mismatch_bp} --extra-col-pair phase1 phase2 \
             --mark-dups \
             --output \
                 >( pairtools split \

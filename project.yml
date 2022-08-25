@@ -91,6 +91,10 @@ input:
     # of the reference genome, and a tab-separated table with contig sizes
     # (known as "chrom.sizes"). The latter is used to specify the subset and the
     # order of contigs in a resulting contact map.
+    #
+    # Note that for haplotype-resolved Hi-C the genome index should be built 
+    # on the fasta file with both maternal and paternal genomes, 
+    # where genotypes have _hap1 and _hap2 suffixes. Same applies for the chromosome sizes files
     genome:
         assembly_name: 'hg19'
         bwa_index_wildcard_path: '/path/to/your/reference/genome/hg19.fa.*'
@@ -141,13 +145,13 @@ parse:
     # Phred scores from the SAM alignments in .pairsam and .bam output files.
     # Enable to make lightweight .pairsam/.bam output.
     # NOTE: when 'make_pairsam' is False, 'drop_seq' is ignored.
-    drop_seq: False
+    drop_seq: True
 
     # Enable 'drop_readid' to drop readID from .pairs files to create
     # lightweight .pairs files
     # NOTE: does not affect alignment records in the .pairsam files and
     # subsequently .bam files after .apirsam splitting.
-    drop_readid: True
+    drop_readid: False
 
     # When 'keep_unparsed_bams' is True, distiller preserves the _immediate_
     # output of bwa in a .bam format. Could be used as a faster alternative
@@ -160,7 +164,7 @@ parse:
     # enables storing MAPQ scores in the .pairsam/.pairs output, which are
     # used later for filtering/binning. The default walks-policy is 'mask'
     # which masks complex walks in long reads.
-    parsing_options: '--add-columns mapq --walks-policy mask'
+    parsing_options: '--add-columns mapq,XA,NM,AS,XS --walks-policy mask'
 
 # Control how PCR/optical duplicates are detected in the data.
 dedup:
@@ -203,6 +207,11 @@ bin:
     filters:
         no_filter: ''
         mapq_30: '(mapq1>=30) and (mapq2>=30)'
+        phase0: '(phase1=="0") and (phase2=="0") and (mapq1>=30) and (mapq2>=30)'
+        phase1: '(phase1=="1") and (phase2=="1") and (mapq1>=30) and (mapq2>=30)'
+        trans_phase: '(phase1!=phase2) and (phase1!=".") and (phase2!=".") and (mapq1>=30) and (mapq2>=30)'
+        unphased: '(phase1==".") or (phase2==".") and (mapq1>=30) and (mapq2>=30)'
+        
 
 ########################################
 # folder structure for storing results
